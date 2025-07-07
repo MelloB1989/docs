@@ -2,8 +2,8 @@
   "$schema": "https://mintlify.com/schema.json",
   "name": "Karma Documentation",
   "logo": {
-    "dark": "/logo/karma-dark-trans.png",
-    "light": "/logo/karma-light-trans.png"
+    "dark": "/logo/karma-dark-trans.svg",
+    "light": "/logo/karma-light-trans.svg"
   },
   "favicon": "/favicon.png",
   "colors": {
