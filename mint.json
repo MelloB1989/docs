@@ -7,24 +7,24 @@
   },
   "favicon": "/favicon.png",
   "colors": {
-    "primary": "#0D9373",
-    "light": "#07C983",
+    "primary": "#ba370f",
+    "light": "#eb6e49",
     "dark": "#0D9373",
     "anchors": {
-      "from": "#0D9373",
-      "to": "#07C983"
+      "from": "#ba370f",
+      "to": "#eb6e49"
     }
   },
   "topbarLinks": [
     {
       "name": "Contact",
       "url": "mailto:kartik.mellob@coffeecodes.in"
+    },
+    {
+      "name": "Portfolio of creator",
+      "url": "https://mellob.in"
     }
   ],
-  "topbarCtaButton": {
-    "name": "Portfolio of creator",
-    "url": "https://mellob.in"
-  },
   "tabs": [
     {
       "name": "API Reference",
@@ -46,12 +46,12 @@
   "navigation": [
     {
       "group": "Get Started",
-      "pages": ["introduction", "quickstart", "development"]
+      "pages": ["introduction", "quickstart", "notes"]
     }
   ],
   "footerSocials": {
     "x": "https://x.com/mellob1989",
-    "github": "https://github.com/MelloB1989",
+    "github": "https://github.com/MelloB1989/karma",
     "linkedin": "https://www.linkedin.com/in/mellobai"
   }
 }

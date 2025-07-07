@@ -1,0 +1,104 @@
+---
+
+title: 'Usage Guidelines'
+description: 'Conventions and best practices when working with the Karma Go package.'
+
+---
+
+## Database Package Guidelines
+
+The `karma/database` package simplifies PostgreSQL interaction using idiomatic Go. Follow these conventions when defining your database schema.
+
+### 1. Schema Design Using Go Structs
+
+Each database table is defined as a Go struct. Karma uses struct tags to generate queries and handle data serialization.
+
+```go
+type Transcriptions struct {
+    TableName                struct{}                      `karma_table:"transcriptions"`
+    Id                       string                        `json:"id" karma:"primary"`
+    AudioId                  string                        `json:"audio_id"`
+    ConversationId           string                        `json:"conversation_id"`
+    TranscribedText          string                        `json:"transcribed_text"`
+    Summary                  string                        `json:"summary"`
+    SentimentAnalysisResults []aai.SentimentAnalysisResult `json:"sentiment_analysis_results" db:"sentiment_analysis_results"`
+    Entities                 []aai.Entity                  `json:"entities" db:"entities"`
+    TopicsByTimestamp        []aai.TopicDetectionResult    `json:"topics_by_timestamp" db:"topics_by_timestamp"`
+    TopicsByRelevance        map[string]float64            `json:"topics_by_relevance" db:"topics_by_relevance"`
+    Highlights               []aai.AutoHighlightResult     `json:"highlights" db:"highlights"`
+    Transcript               TranscriptionResult           `json:"transcript" db:"transcript"`
+}
+```
+
+### 2. Struct Field Tag Guidelines
+
+<AccordionGroup>
+
+<Accordion title="✅ Follow these rules">
+- **Field Names:** Use CamelCase (e.g., `AudioId`, `ConversationId`)
+- **JSON Tags:** Use `snake_case` to match DB columns
+- **Complex Types:** Use both `json` and `db` tags for slices, maps, and nested structs
+- **Primary Key:** Mark primary key field using `karma:"primary"`
+- **Table Name:** Include a dummy `struct{}` field with the `karma_table` tag
+
+</Accordion>
+
+<Accordion title="🛑 Common mistakes">
+
+```go
+// ❌ Wrong field capitalization
+Wrong: ID string `json:"id"`
+Wrong: iD string `json:"id"`
+Wrong: audioId string `json:"audio_id"`
+Wrong: AudioId string `json:"audioid"`
+
+// ✅ Correct formatting
+Correct: Id string `json:"id"`
+Correct: AudioId string `json:"audio_id"`
+```
+
+</Accordion>
+
+</AccordionGroup>
+
+---
+
+## Environment Configuration Guidelines
+
+The Karma suite uses environment variables for all credentials and configuration. No secrets should be hardcoded in your codebase.
+
+### 1. Using the Config Package
+
+Use the `github.com/MelloB1989/karma/config` package to access environment variables. This package provides utility functions to securely load values from `.env`.
+
+### 2. Required Environment Variables
+
+* `DATABASE_URL`: default fallback connection string
+* `ENVIRONMENT`: one of `dev`, `prod`, or `staging`
+* `<ENVIRONMENT>_DATABASE_URL`: environment-specific connection string
+
+### 3. Connection Resolution Logic
+
+* If `ENVIRONMENT` is not set → uses `DATABASE_URL`
+* If `ENVIRONMENT` is set → uses `{ENVIRONMENT}_DATABASE_URL`
+
+### 4. Sample `.env` File
+
+```env
+DATABASE_URL=postgres://username:password@localhost:5432/mydatabase?sslmode=disable
+
+ENVIRONMENT=dev
+DEV_DATABASE_URL=postgres://dev_user:dev_password@localhost:5432/dev_db?sslmode=disable
+PROD_DATABASE_URL=postgres://prod_user:prod_password@db.example.com:5432/prod_db?sslmode=require
+STAGING_DATABASE_URL=postgres://stage_user:stage_password@stage.example.com:5432/stage_db?sslmode=prefer
+```
+
+### 5. Example Usage
+
+```go
+db, err := database.PostgresConn()
+if err != nil {
+    log.Fatal(err)
+}
+defer db.Close()
+```
