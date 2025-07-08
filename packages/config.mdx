@@ -1,0 +1,142 @@
+---
+
+title: 'Config Package'
+description: 'Load and manage environment variables using Karma’s configuration utilities.'
+icon: "file"
+
+---
+
+# Karma Config Package
+
+The `karma/config` package helps you manage application configuration using `.env` files. It includes helpers for loading default configs, custom structs, and individual environment variables — all without hardcoding secrets.
+
+> Karma relies heavily on environment variables across all modules. Use this package to manage them effectively.
+
+---
+
+## 🔧 Setup
+
+Install `karma`:
+
+```bash
+go get github.com/MelloB1989/karma
+```
+
+Create a `.env` file in your project root:
+
+```env
+PORT=8080
+DATABASE_URL=postgres://username:password@localhost:5432/mydb?sslmode=disable
+JWT_SECRET=supersecretkey
+ENVIRONMENT=dev
+```
+
+---
+
+## 📦 Default Configuration
+
+Use `DefaultConfig()` to load all predefined environment variables into a `Config` struct.
+
+```go
+import "github.com/MelloB1989/karma/config"
+
+func main() {
+	cfg := config.DefaultConfig()
+	fmt.Println("PORT:", cfg.Port)
+	fmt.Println("Database URL:", cfg.DatabaseURL)
+}
+```
+
+The `Config` struct includes a comprehensive list of fields such as:
+
+* `Port`, `JWTSecret`, `DatabaseURL`, `RedisURL`, etc.
+* AWS, Twilio, Stripe, OpenAI, and Mailgun credentials
+* Custom webhook and platform keys (`KARMAPAY_*`)
+
+Check the full struct in the [GitHub Repo](https://github.com/MelloB1989/karma/blob/6ef87972a1031729ba6b31fe82f8b11cb234acbd/config/main.go#L12) for supported variables.
+
+---
+
+## 🧩 Custom Struct Configuration
+
+Use `CustomConfig(cfg interface{})` if you only need a subset of variables or a custom struct layout.
+
+### Example
+
+```go
+type MyCustomConfig struct {
+	AppName     string `env:"APP_NAME"`
+	CustomField string `env:"CUSTOM_FIELD"`
+	DatabaseURL string `env:"DATABASE_URL"`
+}
+
+func main() {
+	customCfg := &MyCustomConfig{}
+	err := config.CustomConfig(customCfg)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("App Name:", customCfg.AppName)
+}
+```
+
+> Each field must be tagged with `env:"VARIABLE_NAME"`. If the `env` tag is missing, it defaults to the field name.
+
+---
+
+## 🔍 Get Individual Variables
+
+Use these helpers when you want to fetch specific keys:
+
+### `GetEnv`
+
+```go
+value, err := config.GetEnv("DATABASE_URL")
+```
+
+Returns the value or an error if `.env` fails to load.
+
+---
+
+### `GetEnvOrDefault`
+
+```go
+port := config.GetEnvOrDefault("PORT", "3000")
+```
+
+Returns a default value if the variable is missing or empty.
+
+---
+
+### `GetEnvRaw`
+
+```go
+raw := config.GetEnvRaw("JWT_SECRET")
+```
+
+Returns the value directly as a string. Silent on load errors.
+
+---
+
+## 🧪 Example `.env` Template
+
+```env
+PORT=8080
+DATABASE_URL=postgres://username:password@localhost:5432/mydb?sslmode=disable
+JWT_SECRET=my_jwt_secret
+ENVIRONMENT=dev
+REDIS_URL=redis://localhost:6379
+AWS_ACCESS_KEY_ID=your_key
+AWS_SECRET_ACCESS_KEY=your_secret
+SENDGRID_API_KEY=sendgrid_key
+KARMAPAY_API_KEY=xyz
+OPENAI_KEY=sk-xyz
+```
+
+---
+
+## 🧠 Pro Tips
+
+* Always use `CustomConfig()` for CLI tools or microservices with limited env requirements.
+* Store `.env` at the root of your project and **never commit it** to version control.
+* Prefer `GetEnvOrDefault()` when building tools or scripts that work in local/dev environments.

@@ -33,11 +33,6 @@
   ],
   "anchors": [
     {
-      "name": "Documentation",
-      "icon": "book-open-cover",
-      "url": "https://mintlify.com/docs"
-    },
-    {
       "name": "Blog",
       "icon": "newspaper",
       "url": "https://blogs.mellob.in"
@@ -47,6 +42,26 @@
     {
       "group": "Get Started",
       "pages": ["introduction", "quickstart", "notes"]
+    },
+    {
+      "group": "The Karma Suite packages",
+      "pages": [
+        "packages/database",
+        "packages/config",
+        "packages/apir",
+        "packages/errors",
+        "packages/apigen",
+        {
+          "group": "KarmaPay",
+          "pages": [
+            "packages/karmapay/intro-karmapay",
+            "packages/karmapay/getting-started",
+            "packages/karmapay/configuring-webhook",
+            "packages/karmapay/payment-verification"
+          ],
+          "icon": "credit-card"
+        }
+      ]
     }
   ],
   "footerSocials": {

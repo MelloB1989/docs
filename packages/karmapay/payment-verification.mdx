@@ -1,0 +1,113 @@
+# Setting Up the Payment Verification Endpoint
+
+The `payments.VerifyPaymentAPI()` function from the **KarmaGo** package simplifies payment verification by returning a handler function that integrates seamlessly with the [GoFiber](https://gofiber.io) framework. This endpoint is essential for validating payments after they are completed.
+
+---
+
+## Prerequisites
+
+Before setting up the verification endpoint, ensure:
+
+1. **Environment Variables are Properly Configured**
+   Set the `KARMAPAY_VERIFY_URL` in your `.env` file to the endpoint where you’ll handle payment verification. For example:
+
+   ```env
+   KARMAPAY_VERIFY_URL=https://yourdomain.com/payments/verify
+   ```
+
+2. **GoFiber Installed**
+   If GoFiber is not already installed in your project, add it using:
+
+   ```bash
+   go get github.com/gofiber/fiber/v2
+   ```
+
+3. **KarmaPay PG Service is Running**
+   Ensure the KarmaPay PG Service is up and running with the correct environment variables.
+
+---
+
+## Creating the Verification Endpoint
+
+The `payments.VerifyPaymentAPI()` function provides a Fiber handler that validates the payment details. You just need to register it to your Fiber application.
+
+### Example Code
+
+Here’s how you can set up the verification endpoint:
+
+```go
+package main
+
+import (
+	"github.com/gofiber/fiber/v2"
+	"github.com/MelloB1989/karma/payments"
+)
+
+func main() {
+	// Initialize Fiber app
+	app := fiber.New()
+
+	// Define the payment verification route
+	app.Post("/payments/verify", payments.VerifyPaymentAPI())
+
+	// Start the server
+	if err := app.Listen(":3000"); err != nil {
+		panic(err)
+	}
+}
+```
+
+---
+
+## How It Works
+
+1. **Route Handling**
+   The route `/payments/verify` listens for POST requests. This should be the URL you set in the `KARMAPAY_VERIFY_URL` environment variable.
+
+2. **Verification Logic**
+   - The `payments.VerifyPaymentAPI()` function handles the logic for validating the payment.
+   - It ensures that the payment details match those stored temporarily in Redis (via the KarmaPay PG Service).
+   - The function also checks the payment status with the respective payment gateway.
+
+3. **Environment Variable Linking**
+   The `KARMAPAY_VERIFY_URL` variable connects your Go application to the KarmaPay service, ensuring the verification endpoint is properly registered.
+
+---
+
+## Example `.env` File
+
+Make sure your `.env` file includes the correct URL for verification:
+
+```env
+KARMAPAY_VERIFY_URL=https://yourdomain.com/payments/verify
+```
+
+---
+
+## Testing the Verification Endpoint
+
+1. **Simulate a Payment**
+   Use the `CreatePaymentOrder` function to generate a payment URL and complete a transaction.
+
+2. **Webhook Callback**
+   The payment gateway triggers the verification endpoint upon successful payment. Ensure the endpoint is reachable and correctly configured.
+
+3. **Verify the Results**
+   Check the response from the verification API to confirm the payment is valid.
+
+---
+
+## Notes for Beginners
+
+- The `VerifyPaymentAPI()` function is plug-and-play. You don’t need to write additional code to handle the verification logic unless you have custom requirements.
+- Ensure that your `WEBHOOK_SECRET` is properly set and matches the configuration in your payment gateway to validate webhook authenticity.
+
+---
+
+## Troubleshooting
+
+- **Invalid Payment State:** Ensure Redis is accessible and properly configured.
+- **Incorrect URL:** Verify the `KARMAPAY_VERIFY_URL` is correct and points to your verification route.
+- **Webhook Not Triggering:** Double-check your payment gateway settings and webhook configuration.
+
+By following this guide, you’ll have a fully functional payment verification endpoint integrated into your GoFiber application. This ensures smooth and secure validation of all transactions handled by KarmaPay.

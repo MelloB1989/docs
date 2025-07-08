@@ -1,0 +1,211 @@
+---
+
+title: 'apigen Package'
+description: 'Generate OpenAPI-style documentation from Go structs and definitions using Karma’s APIGen utility.'
+icon: "book"
+
+---
+
+# 🧾 `apigen` – API Documentation Generator
+
+The `karma/apigen` package helps you auto-generate OpenAPI-style REST documentation directly from Go structs. It supports dynamic path params, field overrides, global variables, reusable request/response bodies, and inline headers.
+
+It’s ideal for documenting internal or external APIs with zero OpenAPI spec learning curve.
+
+---
+
+## 🚀 Quick Start
+
+### 📦 Installation
+
+```bash
+go get github.com/MelloB1989/karma/apigen
+```
+
+### ✅ Create a New API Definition
+
+```go
+api := apigen.NewAPIDefinition(
+	"GitLab Issues API",                      // Title
+	"API for managing issues in GitLab",      // Description
+	[]string{"https://gitlab.com/api/v4"},    // Base URLs
+	"./docs",                                 // Output folder
+	"gitlab_issues",                          // Output filename prefix
+)
+```
+
+### 🌐 Add Global Variables
+
+These are available as `$variables` in your documentation templates:
+
+```go
+api.AddGlobalVariable("api_version", "v4")
+api.AddGlobalVariable("default_per_page", "20")
+```
+
+---
+
+## 🔁 Request and Response Bodies
+
+### 🧱 Generate Request Body from Struct
+
+```go
+body, err := apigen.RequestBodyFromStruct(MyRequestStruct{}, "application/json", true, []apigen.FieldOverride{})
+```
+
+<Callout type="info">
+Use <code>FieldOverride</code> to provide examples, override descriptions, or exclude specific fields.
+</Callout>
+
+#### Example override:
+
+```go
+[]apigen.FieldOverride{
+	{
+		Name:     "DueDate",
+		Example:  "2025-06-30",
+		Required: new(bool),
+	},
+	{
+		Name:    "TableName",
+		Exclude: true,
+	},
+}
+```
+
+---
+
+### 📦 Generate Response from Struct
+
+```go
+response, err := apigen.ResponseFromStruct(
+	200,
+	"User created successfully",
+	UserResponse{},
+	"application/json",
+	[]apigen.FieldOverride{},
+)
+```
+
+---
+
+## 🧩 Define Endpoints
+
+Use `AddEndpoint` to declare a REST endpoint with method, path, headers, params, and expected responses.
+
+### Example – `POST /projects/{project_id}/issues`
+
+```go
+api.AddEndpoint(apigen.Endpoint{
+	Path:        "/projects/{project_id}/issues",
+	Method:      "POST",
+	Summary:     "Create new issue",
+	Description: "Creates a new issue in GitLab",
+	PathParams: []apigen.Parameter{
+		{
+			Name:        "project_id",
+			Type:        "integer",
+			Required:    true,
+			Description: "GitLab project ID",
+			Example:     "12345",
+		},
+	},
+	Headers: apigen.KarmaHeaders{
+		apigen.HeaderPrivateToken: "YOUR_GITLAB_TOKEN",
+		apigen.HeaderContentType:  "application/json",
+		apigen.HeaderAccept:       "application/json",
+	},
+	RequestBody: requestBody,
+	Responses: []apigen.Response{
+		*successResponse,
+		{
+			StatusCode:  400,
+			Description: "Bad request",
+			Example:     []byte(`{"message": "Invalid input"}`),
+		},
+	},
+})
+```
+
+---
+
+## 🔐 Authentication Example: Auth APIs
+
+```go
+auth := apigen.NewAPIDefinition(
+	"Auth APIs",
+	"Authentication APIs for users",
+	[]string{"http://localhost:9000"},
+	"./docs/auth",
+	"auth",
+)
+```
+
+### Example – `POST /auth/login`
+
+```go
+loginBody, _ := apigen.RequestBodyFromStruct(LoginBody{}, apigen.ContentTypeJSON, true, nil)
+successResp, _ := apigen.ResponseFromStruct(200, "OTP sent", LoginSuccess{}, apigen.ContentTypeJSON, nil)
+
+auth.AddEndpoint(apigen.Endpoint{
+	Path:        "/auth/login",
+	Method:      "POST",
+	Summary:     "Login with phone number",
+	Description: "Send OTP to user phone",
+	RequestBody: loginBody,
+	Responses: []apigen.Response{
+		*successResp,
+		{
+			StatusCode: 400,
+			Description: "Invalid phone number",
+			Example:     []byte(`{"success": false, "message": "Invalid phone number"}`),
+		},
+	},
+})
+```
+
+---
+
+## 📄 Export Documentation
+
+```go
+err := api.ExportAll()
+if err != nil {
+	log.Fatalf("Export failed: %v", err)
+}
+```
+
+This generates markdown or HTML documentation in the specified folder (e.g., `./docs/gitlab_issues.md` or `.html` depending on config).
+
+---
+
+## 🧠 Tips
+
+* `PathParams` can be defined explicitly or inferred from `{}` in path strings.
+* Headers are centralized via `KarmaHeaders` constants.
+* Use `FieldOverride.Exclude` to hide internal struct fields (e.g., `TableName`, `Id`, `CreatedAt`).
+* Combine multiple `APIDefinition` blocks for different modules (e.g. Auth, Admin, Public APIs).
+
+---
+
+## 📦 Constants Reference
+
+* `apigen.ContentTypeJSON`: `"application/json"`
+* `apigen.HeaderAccept`: `"Accept"`
+* `apigen.HeaderContentType`: `"Content-Type"`
+* `apigen.HeaderPrivateToken`: `"PRIVATE-TOKEN"`
+
+---
+
+## 🧪 Real Example Output
+
+The example generates documentation for:
+
+* `GET /projects/{project_id}/issues`
+* `POST /projects/{project_id}/issues`
+* `GET /projects/{project_id}/issues/{issue_id}`
+* `POST /auth/login`
+* `POST /auth/verify_otp`
+* `POST /auth/register`
+
+All with automatic type inference, examples, field descriptions, and header control.

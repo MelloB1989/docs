@@ -1,0 +1,132 @@
+# Getting Started with KarmaPay Integration
+
+KarmaPay simplifies online payment integrations by providing a unified API to interact with multiple payment gateways such as Razorpay, Stripe, and PhonePe. Follow this guide to set up and start using the KarmaPay package in your Go project.
+
+---
+
+## Prerequisites
+
+Before you begin, ensure you have the following:
+
+1. **Redis**
+   KarmaPay relies on Redis for managing order states temporarily. Ensure Redis is installed and accessible in your environment.
+
+2. **Self-host KarmaPay PG Service**
+   Clone and self-host the [KarmaPay PG Service](https://github.com/MelloB1989/karmapay.pg). This service acts as the backend for managing payment orders. Configure it with proper Redis environment variables.
+
+3. **Environment Variables**
+   Set up the required environment variables in your Go project. Here are the variables and their purposes:
+
+   | Environment Variable       | Description                                                                 |
+   |----------------------------|-----------------------------------------------------------------------------|
+   | `KARMAPAY_API_KEY`         | API key encoded in Base64 (prefixed with `kp_`).                            |
+   | `KARMAPAY_WEBHOOK`         | The webhook endpoint URL that you configure for payment gateway callbacks. |
+   | `KARMAPAY_VERIFY_URL`      | URL used to verify the payment after completion.                            |
+   | `KARMAPAY_PG_ENUM`         | The payment gateway you want to use (`RAZORPAY`, `STRIPE`, or `PHONEPE`).   |
+   | `KARMAPAY_IDENTIFIER`      | Your project name for identification purposes.                              |
+   | `KARMAPAY_APP_DOMAIN`      | Verified domain for the payment gateway (Razorpay, Stripe, or PhonePe).     |
+   | `WEBHOOK_SECRET`           | Secret key for validating webhook calls.                                    |
+   | `REDIS_URL`                | Redis connection string for managing order states.                         |
+
+   Example `.env` file:
+
+   ```env
+   KARMAPAY_API_KEY=kp_YOUR_BASE64_ENCODED_KEY
+   KARMAPAY_WEBHOOK=https://yourdomain.com/webhook
+   KARMAPAY_VERIFY_URL=https://yourdomain.com/verify
+   KARMAPAY_PG_ENUM=RAZORPAY
+   KARMAPAY_IDENTIFIER=YourProjectName
+   KARMAPAY_APP_DOMAIN=yourverifieddomain.com
+   WEBHOOK_SECRET=YourWebhookSecret
+   REDIS_URL=redis://localhost:6379
+   ```
+
+---
+
+## Installation
+
+Install the KarmaPay package in your Go project:
+
+```bash
+go get github.com/MelloB1989/karma/payments
+```
+
+---
+
+## Creating a Payment Order
+
+To create a payment order, use the `payments.CreatePaymentOrder()` function. This function generates a dynamic payment URL that redirects users to the payment gateway.
+
+### Parameters
+
+The `payments.CreatePaymentOrder()` function accepts the following fields:
+
+- **OrderAmount** (`int32`): Total amount for the payment.
+- **OrderCurrency** (`string`): Currency code (e.g., `INR`).
+- **OrderDescription** (`string`): Description of the order or purpose of payment.
+- **OrderMode** (`string`): The payment gateway enum (`RAZORPAY`, `STRIPE`, `PHONEPE`) set in your environment variables.
+- **WebhookURL** (`string`): The webhook URL to handle payment gateway callbacks.
+- **RedirectURL** (`string`): A URL where users are redirected post-payment (optional).
+- **Registration** (`string`): Set to `"no"` if registration is not required.
+
+### Example Code
+
+Here’s how you can create a payment order in your Go application:
+
+```go
+package main
+
+import (
+	"fmt"
+	"github.com/MelloB1989/karma/payments"
+	"github.com/MelloB1989/karma/config"
+)
+
+func createOrder() {
+	// Define the order parameters
+	order := payments.CreatePaymentOrder{
+		OrderAmount:      int32(1000),                        // Amount in minor units (e.g., 1000 for ₹10)
+		OrderCurrency:    "INR",                              // Payment currency
+		OrderDescription: "Booking for venue",               // Description for the payment
+		OrderMode:        config.DefaultConfig().KARMAPAY_PG_ENUM, // Your payment gateway enum from env
+		WebhookURL:       fmt.Sprintf("%s?uid=%s", config.DefaultConfig().KARMAPAY_WEBHOOK, "unique-user-id"), // Dynamic webhook URL
+		RedirectURL:      "",                                // Optional redirect URL
+		Registration:     "no",                              // Registration not required
+	}
+
+	// Call the CreatePaymentOrder function
+	paymentURL, err := payments.CreatePaymentOrder(order)
+	if err != nil {
+		fmt.Println("Error creating order:", err)
+		return
+	}
+
+	fmt.Println("Payment URL:", paymentURL)
+}
+```
+
+---
+
+## Next Steps
+
+1. **Verify Payment**
+   Once the payment is completed, use the `payments.VerifyPayment()` function to validate the transaction.
+
+2. **Handle Webhooks**
+   Implement the webhook handler in your project to process real-time payment notifications from the payment gateway.
+
+3. **Explore More**
+   Refer to the [KarmaPay GitHub repository](https://github.com/MelloB1989/karma) for advanced usage and additional configurations.
+
+---
+
+## Troubleshooting
+
+If you encounter any issues, check:
+
+- Redis connectivity (`REDIS_URL`).
+- Proper configuration of environment variables.
+- Correct hosting of the [KarmaPay PG Service](https://github.com/MelloB1989/karmapay.pg).
+- Gateway-specific requirements (e.g., domain verification).
+
+Feel free to reach out for support or contribute to the project to help us improve KarmaPay!

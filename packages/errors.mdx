@@ -1,0 +1,146 @@
+---
+
+title: 'errors Package'
+description: 'Centralized error loading, retrieval, and writing using Karma’s error management system.'
+icon: "triangle-exclamation"
+
+---
+
+# ⚠️ `errors` – Karma Error Management
+
+The `karma/errors` package provides a structured way to manage and serve application error messages from a centralized JSON file. It helps teams maintain a clean, editable repository of error definitions—ideal for standardized error handling and localization.
+
+---
+
+## 🔧 Setup
+
+Ensure your `.env` file includes the path to the error definition JSON file:
+
+```env
+ERRORS_DEFINATION_FILE=./errors.json
+```
+
+Create an initial `errors.json` file with content like:
+
+```json
+[
+  {
+    "error_code": 1001,
+    "description": "Invalid credentials",
+    "error_msg": "The provided credentials do not match",
+    "user_msg": "Invalid username or password",
+    "error_level": "warning"
+  }
+]
+```
+
+---
+
+## 📦 Import
+
+```go
+import "github.com/MelloB1989/karma/errors"
+```
+
+---
+
+## 📘 Usage
+
+### ✅ Load Errors from File
+
+```go
+karmaErr := errors.NewKarmaError()
+```
+
+This reads all errors from the path specified in `ERRORS_DEFINATION_FILE`. If the file is missing or has bad syntax, the app will panic.
+
+---
+
+### ➕ Add a New Error (in memory)
+
+```go
+karmaErr.AddError(
+    1002,
+    "Database timeout",
+    "Postgres connection failed",
+    "Something went wrong. Please try again.",
+    "critical",
+)
+```
+
+Adds a new error to the in-memory error slice. You must call `WriteErrorsToFile()` to persist it.
+
+---
+
+### 🔍 Get an Error by Code
+
+```go
+err := karmaErr.GetError(1001)
+fmt.Println(err.UserMsg) // "Invalid username or password"
+```
+
+Returns a `models.ErrorMessage` struct with all fields.
+
+---
+
+### 💾 Write Errors to File
+
+```go
+err := karmaErr.WriteErrorsToFile()
+if err != nil {
+	log.Fatal(err)
+}
+```
+
+Overwrites the JSON file with the current in-memory list of errors.
+
+---
+
+## 🧪 Full Example
+
+```go
+package main
+
+import (
+	"fmt"
+	"github.com/MelloB1989/karma/errors"
+)
+
+func main() {
+	karmaErr := errors.NewKarmaError()
+
+	// Add new error
+	karmaErr.AddError(
+		2001,
+		"Token expired",
+		"JWT token validation failed",
+		"Session expired. Please log in again.",
+		"warning",
+	)
+
+	// Get an existing error
+	err := karmaErr.GetError(1001)
+	fmt.Println("User-facing error:", err.UserMsg)
+
+	// Save updated list to file
+	if err := karmaErr.WriteErrorsToFile(); err != nil {
+		panic(err)
+	}
+}
+```
+
+---
+
+## 📌 Notes
+
+* Errors are stored in a JSON array of objects using the `models.ErrorMessage` struct.
+* Useful for APIs where structured error responses with user-friendly messages are critical.
+* Make sure the file path in `.env` is correct and writable by the application.
+
+---
+
+## 🧠 Best Practices
+
+* Use `AddError()` for dynamic additions, such as admin-facing tools.
+* Always validate your `errors.json` syntax to avoid startup panics.
+* Use `UserMsg` for frontend display and `ErrorMsg` for internal logs.

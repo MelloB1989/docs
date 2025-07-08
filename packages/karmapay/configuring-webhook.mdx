@@ -1,0 +1,141 @@
+# Setting Up the Webhook Endpoint
+
+The **KarmaGo** package provides a simple way to handle payment gateway webhooks securely and efficiently. The `payments.KarmaPayWebhook()` function integrates with GoFiber to validate incoming webhook requests and execute a custom action function when the webhook is verified.
+
+---
+
+## Prerequisites
+
+Before setting up the webhook endpoint, ensure:
+
+1. **Environment Variables are Properly Configured**
+   Set the `KARMAPAY_WEBHOOK` variable in your `.env` file. For example:
+
+   ```env
+   KARMAPAY_WEBHOOK=https://yourdomain.com/webhook
+   ```
+
+2. **Webhook Secret**
+   The `WEBHOOK_SECRET` variable must be configured in your environment for secure webhook validation. For example:
+
+   ```env
+   WEBHOOK_SECRET=my-secure-webhook-secret
+   ```
+
+3. **Webhook URL Registered with Payment Gateway**
+   Ensure that the `KARMAPAY_WEBHOOK` URL is registered with the payment gateway you're using (e.g., Razorpay, Stripe, etc.).
+
+---
+
+## Creating the Webhook Endpoint
+
+The `payments.KarmaPayWebhook()` function takes a custom action function as input. This action function is executed when the webhook is verified successfully.
+
+### Example Code
+
+Here’s how to set up the webhook endpoint in your Go application:
+
+```go
+package main
+
+import (
+	"github.com/gofiber/fiber/v2"
+	"github.com/MelloB1989/karma/payments"
+	"yourproject/bookings"
+)
+
+// Define the action function for handling webhook data
+func WebhookHandler(data map[string]string) error {
+	uid := data["uid"]
+	bookingId := data["koid"]
+
+	// Retrieve the booking by ID and user ID
+	booking, err := bookings.GetBookingByIdAndUID(bookingId, uid)
+	if err != nil || booking == nil {
+		return err
+	}
+
+	// Update the booking status
+	booking.Status = "CONFIRMED"
+	err = bookings.UpdateBooking(booking)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func main() {
+	// Initialize Fiber app
+	app := fiber.New()
+
+	// Define the webhook route
+	app.Post("/webhook", payments.KarmaPayWebhook(WebhookHandler))
+
+	// Start the server
+	if err := app.Listen(":3000"); err != nil {
+		panic(err)
+	}
+}
+```
+
+---
+
+## How It Works
+
+1. **Webhook Route Handling**
+   - The `/webhook` route listens for POST requests from the payment gateway.
+   - This should match the URL you set in the `KARMAPAY_WEBHOOK` environment variable.
+
+2. **Verification and Execution**
+   - The `KarmaPayWebhook()` function validates the incoming webhook request using the `WEBHOOK_SECRET`.
+   - If the request is verified successfully, the custom action function (`WebhookHandler` in this example) is executed.
+
+3. **Automatic Parameters**
+   - The webhook payload automatically includes a `koid` field (the Order ID) added by the KarmaPay service.
+   - You can use `koid` to retrieve the relevant booking or order.
+
+4. **Custom Action Function**
+   - The `WebhookHandler` function takes a `map[string]string` containing the webhook data.
+   - You can define custom logic, such as updating booking statuses or triggering other workflows, based on the webhook data.
+
+---
+
+## Example `.env` File
+
+Here’s an example `.env` configuration for the webhook:
+
+```env
+KARMAPAY_WEBHOOK=https://yourdomain.com/webhook
+WEBHOOK_SECRET=my-secure-webhook-secret
+```
+
+---
+
+## Testing the Webhook
+
+1. **Simulate a Payment**
+   Use the `CreatePaymentOrder` function to generate a payment URL and complete a transaction.
+
+2. **Trigger the Webhook**
+   The payment gateway sends a POST request to the `/webhook` endpoint after the payment is completed.
+
+3. **Verify the Results**
+   Check that the `WebhookHandler` function executes correctly and performs the desired action (e.g., updating the booking status).
+
+---
+
+## Notes for Beginners
+
+- **Webhook Verification:** The `KarmaPayWebhook` function automatically verifies the webhook signature using `WEBHOOK_SECRET`. You don’t need to write custom verification logic.
+- **Action Function Flexibility:** The action function can perform any custom operation you define, as long as it matches the signature `func(data map[string]string) error`.
+
+---
+
+## Troubleshooting
+
+- **Webhook Not Triggering:** Ensure the payment gateway has the correct URL and is configured to send webhook events.
+- **Signature Mismatch:** Verify that `WEBHOOK_SECRET` matches the secret configured in the payment gateway.
+- **Action Function Errors:** Check the logs for errors in the custom action function.
+
+With this setup, your application will be able to handle and process webhook events from KarmaPay securely and efficiently.

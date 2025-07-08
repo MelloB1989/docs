@@ -1,0 +1,221 @@
+---
+
+title: 'Database Package'
+description: 'PostgreSQL ORM-style helpers with struct mapping, inserts, updates, and connection handling.'
+icon: "database"
+
+---
+
+# Karma Database Package
+
+The `karma/database` package provides utilities to work with PostgreSQL using Go structs. It helps you insert, update, and parse query results without writing verbose SQL.
+
+---
+
+## 📦 Installation
+
+```bash
+go get github.com/MelloB1989/karma
+```
+
+---
+
+## 🔌 Database Connection
+
+Use the built-in `PostgresConn` function to connect to your database using `.env` values.
+
+```go
+import "github.com/MelloB1989/karma/database"
+
+db, err := database.PostgresConn()
+if err != nil {
+    log.Fatal(err)
+}
+defer db.Close()
+```
+
+You can optionally pass pool config:
+
+```go
+opts := database.PostgresConnOptions{
+	MaxOpenConns:    ptr(20),
+	MaxIdleConns:    ptr(10),
+	ConnMaxLifetime: ptr(300), // in seconds
+}
+db, err := database.PostgresConn(opts)
+```
+
+---
+
+## 🔧 Environment Configuration
+
+Your `.env` file must define one of the following:
+
+```env
+# Default fallback
+DATABASE_URL=postgres://username:password@localhost:5432/mydb?sslmode=disable
+
+# Optional environment-based configs
+ENVIRONMENT=dev
+DEV_DATABASE_URL=postgres://dev_user:dev_pass@localhost:5432/devdb?sslmode=disable
+PROD_DATABASE_URL=postgres://prod_user:prod_pass@db.example.com:5432/proddb?sslmode=require
+```
+
+Karma will choose the right URL based on the `ENVIRONMENT` variable.
+
+---
+
+## 🧩 Struct Definition Rules
+
+<Callout type="tip">
+To enable Karma's ORM helpers, your struct must follow specific tag and format rules.
+</Callout>
+
+```go
+type User struct {
+    TableName string                 `karma_table:"users" json:"-"`
+    Id        int                    `json:"id"`
+    Username  string                 `json:"username"`
+    Email     string                 `json:"email"`
+    Tags      []string               `json:"tags" db:"json"`
+    Metadata  map[string]interface{} `json:"metadata" db:"json"`
+}
+```
+
+### ✅ Guidelines
+
+* **CamelCase** field names in Go
+* **snake\_case** keys for JSON and DB tags
+* For arrays/maps/structs, always add `db:"json"` for PostgreSQL compatibility
+* Include `TableName` field with `karma_table` tag for ORM functionality
+
+---
+
+## 🔧 Function Reference
+
+### FetchColumnNames
+
+```go
+func FetchColumnNames(db *sqlx.DB, tableName string) ([]string, error)
+```
+
+Returns a list of column names for a given table.
+
+```go
+cols, err := database.FetchColumnNames(db, "users")
+fmt.Println(cols) // ["id", "username", "email", ...]
+```
+
+---
+
+### ParseRows
+
+```go
+func ParseRows(rows *sql.Rows, dest interface{}) error
+```
+
+Scans SQL rows into a slice of structs.
+
+```go
+var users []User
+rows, _ := db.Query("SELECT * FROM users")
+err := database.ParseRows(rows, &users)
+```
+
+> `dest` must be a pointer to a slice of structs.
+
+---
+
+### InsertStruct
+
+```go
+func InsertStruct(db *sqlx.DB, tableName string, data interface{}) error
+```
+
+Inserts a struct into a table.
+
+```go
+user := User{
+    Username: "john_doe",
+    Email:    "john@example.com",
+    Tags:     []string{"admin", "beta"},
+    Metadata: map[string]interface{}{"source": "referral"},
+}
+err := database.InsertStruct(db, "users", &user)
+```
+
+---
+
+### UpdateStruct
+
+```go
+func UpdateStruct(db *sqlx.DB, tableName string, data interface{}, conditionField string, conditionValue interface{}) error
+```
+
+Updates a table row based on a given condition.
+
+```go
+user.Email = "new@email.com"
+err := database.UpdateStruct(db, "users", &user, "id", user.Id)
+```
+
+---
+
+## 🧪 Full Example
+
+```go
+package main
+
+import (
+	"log"
+	"github.com/MelloB1989/karma/database"
+)
+
+type User struct {
+	TableName string                 `karma_table:"users" json:"-"`
+	Id        int                    `json:"id"`
+	Username  string                 `json:"username"`
+	Email     string                 `json:"email"`
+	Tags      []string               `json:"tags" db:"json"`
+	Metadata  map[string]interface{} `json:"metadata" db:"json"`
+}
+
+func main() {
+	db, err := database.PostgresConn()
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer db.Close()
+
+	// Insert
+	user := User{Username: "alice", Email: "alice@ex.com", Tags: []string{"early"}, Metadata: map[string]interface{}{"lang": "en"}}
+	if err := database.InsertStruct(db, "users", &user); err != nil {
+		log.Fatal(err)
+	}
+
+	// Update
+	user.Email = "alice@updated.com"
+	if err := database.UpdateStruct(db, "users", &user, "id", user.Id); err != nil {
+		log.Fatal(err)
+	}
+
+	// Fetch
+	rows, err := db.Query("SELECT * FROM users")
+	if err != nil {
+		log.Fatal(err)
+	}
+	var users []User
+	if err := database.ParseRows(rows, &users); err != nil {
+		log.Fatal(err)
+	}
+	log.Println("Fetched users:", users)
+}
+```
+
+---
+
+## 🧠 Pro Tips
+
+* For dynamic field updates (only update changed fields), use `sqlx.NamedExec` manually.
+* Use `karma/config` for all env loading. Never hardcode secrets.
+* Combine with `karma/middleware` to add request logging or panic recovery around DB operations.

@@ -1,0 +1,179 @@
+---
+
+title: 'apir Package'
+description: 'Reusable Go HTTP client for REST APIs with JSON support, file uploads, and custom headers.'
+icon: "mobile-button"
+
+---
+
+# 📦 `apir` – Simple Go HTTP API Client
+
+The `apir` package provides a clean and reusable HTTP client for working with REST APIs. It supports all major HTTP methods, handles JSON encoding/decoding automatically, and simplifies file uploads and header management.
+
+---
+
+## 🔧 Installation
+
+```bash
+go get github.com/MelloB1989/karma/apir
+```
+
+---
+
+## 🚀 Quick Start
+
+```go
+import "github.com/MelloB1989/karma/apir"
+
+client := apir.NewAPIClient("https://api.example.com", map[string]string{
+    "Authorization": "Bearer your_token",
+    "Content-Type":  "application/json",
+})
+```
+
+<Callout type="info">
+You can enable debug mode using:
+<code>apir.NewAPIClient(baseURL, headers, true)</code>
+</Callout>
+
+---
+
+## 📘 Supported HTTP Methods
+
+All request methods automatically:
+
+* Encode `requestBody` as JSON (if provided)
+* Decode the response into `responseStruct`
+* Return a meaningful error if status is not 2xx
+
+### `GET`
+
+```go
+err := client.Get("/users", &responseStruct)
+```
+
+### `POST`
+
+```go
+err := client.Post("/users", requestBody, &responseStruct)
+```
+
+### `PUT`
+
+```go
+err := client.Put("/users/1", requestBody, &responseStruct)
+```
+
+### `DELETE`
+
+```go
+err := client.Delete("/users/1", &responseStruct)
+```
+
+### `PATCH`
+
+```go
+err := client.Patch("/users/1", requestBody, &responseStruct)
+```
+
+### `OPTIONS`
+
+```go
+err := client.Options("/users", &responseStruct)
+```
+
+### `HEAD`
+
+```go
+err := client.Head("/users", &responseStruct)
+```
+
+### `CONNECT`
+
+```go
+err := client.Connect("/proxy-endpoint", &responseStruct)
+```
+
+### `TRACE`
+
+```go
+err := client.Trace("/debug-endpoint", &responseStruct)
+```
+
+---
+
+## 📤 File Uploads
+
+Use `UploadFile` to send files as `multipart/form-data`.
+
+```go
+err := client.UploadFile(
+    "/upload",
+    "file",                  // Form field name
+    "./image.png",           // Path to file
+    map[string]string{       // Extra form fields
+        "title": "Sample",
+    },
+    &responseStruct,
+)
+```
+
+---
+
+## 🧰 Header Management
+
+### Add a Header
+
+```go
+client.AddHeader("X-Custom", "value")
+```
+
+### Remove a Header
+
+```go
+client.RemoveHeader("X-Custom")
+```
+
+---
+
+## ⚙️ Low-Level Access
+
+### `sendRequest`
+
+Use if you need raw control over request sending.
+
+```go
+response, err := client.SendRequest("GET", "/status", nil)
+```
+
+Returns raw response body as `[]byte`.
+
+---
+
+## ✅ Example
+
+```go
+type User struct {
+    ID    string `json:"id"`
+    Name  string `json:"name"`
+    Email string `json:"email"`
+}
+
+client := apir.NewAPIClient("https://api.example.com", nil)
+
+var user User
+err := client.Get("/users/1", &user)
+if err != nil {
+    log.Fatal(err)
+}
+
+fmt.Printf("User: %+v\n", user)
+```
+
+---
+
+## 📌 Notes
+
+* Request body must be a Go struct or `map[string]interface{}`.
+* Responses are unmarshaled directly into the target struct.
+* Returns a descriptive error if the server responds with a non-2xx status code.
