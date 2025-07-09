@@ -77,8 +77,8 @@ type User struct {
     Id        int                    `json:"id"`
     Username  string                 `json:"username"`
     Email     string                 `json:"email"`
-    Tags      []string               `json:"tags" db:"json"`
-    Metadata  map[string]interface{} `json:"metadata" db:"json"`
+    Tags      []string               `json:"tags" db:"tags"`
+    Metadata  map[string]interface{} `json:"metadata" db:"metadata"`
 }
 ```
 
@@ -86,7 +86,7 @@ type User struct {
 
 * **CamelCase** field names in Go
 * **snake\_case** keys for JSON and DB tags
-* For arrays/maps/structs, always add `db:"json"` for PostgreSQL compatibility
+* For arrays/maps/structs, always add `db:"<column_name>"` for PostgreSQL compatibility
 * Include `TableName` field with `karma_table` tag for ORM functionality
 
 ---
@@ -176,8 +176,8 @@ type User struct {
 	Id        int                    `json:"id"`
 	Username  string                 `json:"username"`
 	Email     string                 `json:"email"`
-	Tags      []string               `json:"tags" db:"json"`
-	Metadata  map[string]interface{} `json:"metadata" db:"json"`
+	Tags      []string               `json:"tags" db:"tags"`
+	Metadata  map[string]interface{} `json:"metadata" db:"metadata"`
 }
 
 func main() {
