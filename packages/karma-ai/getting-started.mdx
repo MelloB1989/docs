@@ -1,0 +1,108 @@
+---
+title: Getting started
+description: Install the Karma AI package and make your first request in under 2 minutes.
+---
+
+## Installation
+
+Install the packages:
+
+```bash
+go get github.com/MelloB1989/karma/ai
+go get github.com/MelloB1989/karma/models
+````
+
+> The library auto-reads API keys from your `.env` (see **Environment setup**).
+
+## Your first response
+
+```go
+package main
+
+import (
+  "fmt"
+
+  "github.com/MelloB1989/karma/ai"
+  "github.com/MelloB1989/karma/models"
+)
+
+func main() {
+  // Pick any supported model. Example: OpenAI's lightweight model.
+  kai := ai.NewKarmaAI(
+    ai.ChatModelGPT4oMini,
+    ai.WithSystemMessage("You are a helpful assistant."),
+    ai.WithTemperature(0.7),
+    ai.WithMaxTokens(200),
+  )
+
+  resp, err := kai.ChatCompletion(models.AIChatHistory{
+    Messages: []models.AIMessage{
+      {Role: models.User, Message: "Give me 3 Go tips for beginners."},
+    },
+  })
+  if err != nil {
+    panic(err)
+  }
+
+  fmt.Println(resp.AIResponse)
+}
+```
+
+## Streaming responses (token-by-token)
+
+```go
+ch := func(chunk models.StreamedResponse) error {
+  // prints tokens as they arrive
+  fmt.Print(chunk.AIResponse)
+  return nil
+}
+
+kai := ai.NewKarmaAI(ai.ModelClaude3_7SonnetLatest)
+final, err := kai.ChatCompletionStream(models.AIChatHistory{
+  Messages: []models.AIMessage{
+    {Role: models.User, Message: "Explain goroutines briefly."},
+  },
+}, ch)
+if err != nil { panic(err) }
+
+fmt.Println("\n\n---\nFinal:")
+fmt.Println(final.AIResponse)
+```
+
+## Image input (vision)
+
+```go
+kai := ai.NewKarmaAI(
+  ai.ChatModelGPT4oMini,
+  ai.WithSystemMessage("Describe images clearly for non-experts."),
+)
+
+resp, err := kai.ChatCompletion(models.AIChatHistory{
+  Messages: []models.AIMessage{
+    {
+      Role:    models.User,
+      Message: "Describe this building.",
+      Images: []string{
+        "https://upload.wikimedia.org/wikipedia/commons/thumb/3/32/Googleplex_HQ_%28cropped%29.jpg/960px-Googleplex_HQ_%28cropped%29.jpg",
+      },
+    },
+  },
+})
+if err != nil { panic(err) }
+fmt.Println(resp.AIResponse)
+```
+
+## One-off prompt (no history)
+
+```go
+kai := ai.NewKarmaAI(
+  ai.Gemini20Flash,
+  ai.WithSystemMessage("Act as a friendly AI."),
+  ai.WithTemperature(0.5),
+  ai.WithMaxTokens(100),
+)
+
+resp, err := kai.GenerateFromSinglePrompt("Hello!")
+if err != nil { panic(err) }
+fmt.Println(resp.AIResponse)
+```

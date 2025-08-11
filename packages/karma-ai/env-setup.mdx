@@ -1,0 +1,27 @@
+---
+title: Environment setup
+description: Configure API keys via .env for OpenAI, Anthropic, Grok (xAI), Gemini, and AWS Bedrock.
+---
+
+Karma AI automatically reads keys from your `.env` file (or environment variables) via the internal config utilities. Add the keys you plan to use:
+
+```bash
+# OpenAI
+OPENAI_KEY=sk-...
+
+# Anthropic (Claude)
+ANTHROPIC_API_KEY=sk-ant-...
+
+# Grok (xAI)
+XAI_API_KEY=xaikey-...
+
+# Google Gemini
+GEMINI_API_KEY=AIza...
+
+# AWS Bedrock
+AWS_ACCESS_KEY_ID=AKIA...
+AWS_SECRET_ACCESS_KEY=xxxxxxxx
+AWS_BEDROCK_REGION=us-east-1
+````
+
+> **Tip:** Only set the providers you need. Karma AI will call the correct provider based on the `Model` you choose (e.g., `ai.ChatModelGPT4oMini` for OpenAI, `ai.ModelClaude3_7SonnetLatest` for Anthropic, etc.).

@@ -1,0 +1,28 @@
+---
+title: Usage of Analytics
+description: Enable analytics collection with Posthog's LLM observability for prompts, tool calls, and AI output.
+---
+
+You can enable analytics to trace interactions and performance. The helper option below turns on collection and configures PostHog.
+
+```go
+func ConfigureAnalytics(did, tid string) ai.Option
+````
+
+### Environment variables
+
+```bash
+POSTHOG_KEY=phc_...
+POSTHOG_ENDPOINT=https://app.posthog.com
+```
+
+### Enabling in your client
+
+```go
+kai := ai.NewKarmaAI(
+  ai.ChatModelGPT4oMini,
+  ai.ConfigureAnalytics("user-123", "trace-abc"),
+)
+```
+
+> With analytics on, Karma AI will capture user prompts, tool calls (if MCP/tools enabled), and AI responses under your identifiers.

@@ -1,0 +1,131 @@
+---
+title: Basic usage
+description: Build chats, stream output, and work with messages and responses using Karma AI.
+---
+
+## Create a client
+
+```go
+kai := ai.NewKarmaAI(
+  ai.ChatModelGPT4oMini,         // pick a model
+  ai.WithSystemMessage("You are a smart AI assistant"),
+  ai.WithTemperature(1),
+  ai.WithMaxTokens(200),
+  ai.WithTopP(0.9),
+)
+````
+
+Common model examples you can use out of the box:
+
+* `ai.ChatModelGPT4oMini` (OpenAI)
+* `ai.ModelClaude3_7SonnetLatest` (Anthropic Claude 3.7 Sonnet)
+* `ai.GROK_3_MINI` and `ai.GROK_4_0709` (xAI Grok)
+* `ai.Gemini20Flash` (Google Gemini)
+
+> Availability depends on your API access and keys.
+
+## Send a chat completion
+
+```go
+resp, err := kai.ChatCompletion(models.AIChatHistory{
+  Messages: []models.AIMessage{
+    {Role: models.User, Message: "Summarize Goroutines in 3 bullets."},
+  },
+})
+if err != nil { panic(err) }
+
+fmt.Println(resp.AIResponse)  // final text
+fmt.Println(resp.Tokens)      // total tokens
+```
+
+## Stream a response
+
+```go
+callback := func(chunk models.StreamedResponse) error {
+  fmt.Print(chunk.AIResponse)
+  return nil
+}
+
+final, err := kai.ChatCompletionStream(models.AIChatHistory{
+  Messages: []models.AIMessage{
+    {Role: models.User, Message: "Write a haiku about channels."},
+  },
+}, callback)
+if err != nil { panic(err) }
+
+fmt.Println("\n\nFinal output:")
+fmt.Println(final.AIResponse)
+```
+
+## Single-prompt generation
+
+```go
+resp, err := kai.GenerateFromSinglePrompt("List 5 standard Go tools.")
+if err != nil { panic(err) }
+fmt.Println(resp.AIResponse)
+```
+
+## Message & history types
+
+```go
+type AIMessage struct {
+  Images    []string  // URLs/Base64
+  Files     []string  // URLs/Base64
+  Message   string
+  Role      AIRoles   // models.User, models.Assistant, etc.
+  Timestamp time.Time
+  UniqueId  string
+}
+
+type AIChatHistory struct {
+  Messages    []AIMessage
+  ChatId      string
+  CreatedAt   time.Time
+  Title       string
+  Description string
+  SystemMsg   string
+  Context     string
+}
+```
+
+## Response types
+
+```go
+type AIChatResponse struct {
+  AIResponse   string
+  Tokens       int
+  InputTokens  int
+  OutputTokens int
+  TimeTaken    int
+}
+
+type StreamedResponse struct {
+  AIResponse string
+  TokenUsed  int
+  TimeTaken  int
+}
+```
+
+## KarmaAI fields (reference)
+
+```go
+type KarmaAI struct {
+  Model         Models
+  SystemMessage string
+  Context       string
+  UserPrePrompt string
+  Temperature   float64
+  TopP          float64
+  TopK          float64
+  MaxTokens     int64
+  ResponseType  string // text/plain, application/json, application/xml, application/yaml, text/x.enum
+  MCPConfig     struct {
+    MCPUrl    string
+    AuthToken string
+    MCPTools  []MCPTool
+  }
+  MCPServers   []MCPServer
+  ToolsEnabled bool
+  Analytics    Analytics
+}
+```

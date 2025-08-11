@@ -60,6 +60,17 @@
             "packages/karmapay/payment-verification"
           ],
           "icon": "credit-card"
+        },
+        {
+          "group": "Karma AI Package",
+          "pages": [
+            "packages/karma-ai/getting-started",
+            "packages/karma-ai/env-setup",
+            "packages/karma-ai/basic-use",
+            "packages/karma-ai/mcp-use",
+            "packages/karma-ai/analytics-use"
+          ],
+          "icon": "robot"
         }
       ]
     }

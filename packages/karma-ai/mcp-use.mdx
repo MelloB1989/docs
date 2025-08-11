@@ -1,0 +1,92 @@
+---
+title: Usage with MCP
+description: Call external tools through MCP with a single or multiple servers.
+---
+
+Model Context Protocol (MCP) lets your model call tools you expose via an MCP server.
+
+## Single MCP server
+
+Define an input schema for your tool:
+
+```go
+type CalculatorInput struct {
+  Operation string  `json:"operation" jsonschema_description:"The arithmetic operation to perform (add, subtract, multiply, divide)"`
+  X         float64 `json:"x" jsonschema_description:"First number"`
+  Y         float64 `json:"y" jsonschema_description:"Second number"`
+}
+````
+
+Initialize `KarmaAI` with MCP options:
+
+```go
+kai := ai.NewKarmaAI(
+  ai.GROK_3_MINI,                // use a model that supports MCP/tool calling
+  ai.WithMaxTokens(1000),
+  ai.WithTemperature(1),
+  ai.WithTopP(0.9),
+  ai.WithTopK(50),
+
+  // MCP config
+  ai.SetMCPUrl("http://localhost:8086/mcp"),
+  ai.SetMCPAuthToken(config.GetEnvRaw("TEST_TOKEN")),
+  ai.SetMCPTools(ai.MCPTool{
+    FriendlyName: "Calculator",
+    ToolName:     "calculate",
+    Description:  "Perform basic arithmetic operations (add, subtract, multiply, divide).",
+    InputSchema:  CalculatorInput{},
+  }),
+)
+```
+
+Ask the model to use your tool:
+
+```go
+history := models.AIChatHistory{
+  Messages: []models.AIMessage{
+    {
+      Role:    models.User,
+      Message: "Please calculate 123 + 456. Use the calculator tool provided.",
+    },
+  },
+  ChatId:    "example-chat-2",
+  CreatedAt: time.Now(),
+  Title:     "Using MCP Tools",
+}
+
+resp, err := kai.ChatCompletion(history)
+if err != nil { panic(err) }
+fmt.Println(resp.AIResponse)
+```
+
+> Ensure your MCP server is running and reachable at the URL you configured, and that the auth token matches.
+
+## Multiple MCP servers
+
+Use either `SetMCPServers` to replace servers or `AddMCPServer` to append.
+
+```go
+// Replace any existing MCP servers
+func SetMCPServers(servers ...MCPServer) ai.Option
+
+// Append a new MCP server
+func AddMCPServer(url, authToken string, tools ...MCPTool) ai.Option
+```
+
+Example usage:
+
+```go
+kai := ai.NewKarmaAI(
+  ai.GROK_4_0709,
+  ai.AddMCPServer("http://localhost:8086/mcp", "token1",
+    ai.MCPTool{FriendlyName: "Calc", ToolName: "calculate", InputSchema: CalculatorInput{}},
+  ),
+  ai.AddMCPServer("https://tools.mycompany.com/mcp", "token2",
+    ai.MCPTool{FriendlyName: "Weather", ToolName: "weather_lookup", InputSchema: struct {
+      City string `json:"city"`
+    }{}},
+  ),
+)
+```
+
+> **Note:** Not all models support MCP. Use a model where `Model.SupportsMCP()` is true (e.g., Grok variants shown above).
