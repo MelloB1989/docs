@@ -51,6 +51,7 @@
         "packages/apir",
         "packages/errors",
         "packages/apigen",
+        "packages/mailer",
         {
           "group": "KarmaPay",
           "pages": [
