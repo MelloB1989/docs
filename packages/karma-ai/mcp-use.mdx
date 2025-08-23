@@ -21,7 +21,8 @@ Initialize `KarmaAI` with MCP options:
 
 ```go
 kai := ai.NewKarmaAI(
-  ai.GROK_3_MINI,                // use a model that supports MCP/tool calling
+  ai.GPT4o,         // use a model that supports MCP/tool calling
+  ai.OpenAI,        // pick a provider
   ai.WithMaxTokens(1000),
   ai.WithTemperature(1),
   ai.WithTopP(0.9),
@@ -77,7 +78,8 @@ Example usage:
 
 ```go
 kai := ai.NewKarmaAI(
-  ai.GROK_4_0709,
+	ai.GPT4o,         // use a model that supports MCP/tool calling
+  ai.OpenAI,        // pick a provider
   ai.AddMCPServer("http://localhost:8086/mcp", "token1",
     ai.MCPTool{FriendlyName: "Calc", ToolName: "calculate", InputSchema: CalculatorInput{}},
   ),

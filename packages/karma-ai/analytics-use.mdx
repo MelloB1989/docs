@@ -20,7 +20,8 @@ POSTHOG_ENDPOINT=https://app.posthog.com
 
 ```go
 kai := ai.NewKarmaAI(
-  ai.ChatModelGPT4oMini,
+	ai.GPT4o,         // pick a model
+  ai.OpenAI,        // pick a provider
   ai.ConfigureAnalytics("user-123", "trace-abc"),
 )
 ```

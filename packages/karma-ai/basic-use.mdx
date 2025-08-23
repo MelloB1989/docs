@@ -7,7 +7,8 @@ description: Build chats, stream output, and work with messages and responses us
 
 ```go
 kai := ai.NewKarmaAI(
-  ai.ChatModelGPT4oMini,         // pick a model
+  ai.GPT4o,         // pick a model
+  ai.OpenAI,        // pick a provider
   ai.WithSystemMessage("You are a smart AI assistant"),
   ai.WithTemperature(1),
   ai.WithMaxTokens(200),
@@ -17,9 +18,9 @@ kai := ai.NewKarmaAI(
 
 Common model examples you can use out of the box:
 
-* `ai.ChatModelGPT4oMini` (OpenAI)
-* `ai.ModelClaude3_7SonnetLatest` (Anthropic Claude 3.7 Sonnet)
-* `ai.GROK_3_MINI` and `ai.GROK_4_0709` (xAI Grok)
+* `ai.GPT4o` (OpenAI)
+* `ai.Claude4Opus` (Anthropic Claude 3.7 Sonnet)
+* `ai.Grok3Mini` and `ai.Grok4` (xAI Grok)
 * `ai.Gemini20Flash` (Google Gemini)
 
 > Availability depends on your API access and keys.

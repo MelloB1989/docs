@@ -29,7 +29,8 @@ import (
 func main() {
   // Pick any supported model. Example: OpenAI's lightweight model.
   kai := ai.NewKarmaAI(
-    ai.ChatModelGPT4oMini,
+    ai.GPT4o,         // pick a model
+    ai.OpenAI,        // pick a provider
     ai.WithSystemMessage("You are a helpful assistant."),
     ai.WithTemperature(0.7),
     ai.WithMaxTokens(200),
@@ -73,7 +74,8 @@ fmt.Println(final.AIResponse)
 
 ```go
 kai := ai.NewKarmaAI(
-  ai.ChatModelGPT4oMini,
+	ai.GPT4o,         // pick a model
+  ai.OpenAI,        // pick a provider
   ai.WithSystemMessage("Describe images clearly for non-experts."),
 )
 
@@ -96,7 +98,8 @@ fmt.Println(resp.AIResponse)
 
 ```go
 kai := ai.NewKarmaAI(
-  ai.Gemini20Flash,
+	ai.GPT4o,         // pick a model
+  ai.OpenAI,        // pick a provider
   ai.WithSystemMessage("Act as a friendly AI."),
   ai.WithTemperature(0.5),
   ai.WithMaxTokens(100),
