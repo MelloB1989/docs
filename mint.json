@@ -69,7 +69,8 @@
             "packages/karma-ai/env-setup",
             "packages/karma-ai/basic-use",
             "packages/karma-ai/mcp-use",
-            "packages/karma-ai/analytics-use"
+            "packages/karma-ai/analytics-use",
+            "packages/karma-ai/memory"
           ],
           "icon": "robot"
         }
