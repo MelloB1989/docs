@@ -25,6 +25,37 @@ karmax loops install daily-post
 
 Until both are connected the workflow runs, decides, and posts nothing.
 
+## Try it first
+
+Before a single word reaches X or LinkedIn:
+
+```bash
+karmax social dry-run on
+```
+
+Every post KARMAX would make now arrives on your WhatsApp instead, marked
+`✅ would post` or `🚫 refused`. The refused ones are the useful half — they are
+what the guard stopped, and you get to judge whether it was right.
+
+It works before you have connected either account, which is the point:
+previewing is what you do *before* signing in, not after.
+
+```bash
+karmax loops run daily-post   # a run you ask for ignores the once-a-day rule
+karmax social dry-run off     # go live
+```
+
+On a quiet day it will normally decide there is nothing to say. To see a draft
+anyway while you are still tuning it, set
+`KARMAX_LOOP_DAILY_POST_FORCE=true` — that skips the "is today worth it" check
+and tells the model not to decline. It does **not** skip the privacy guard or
+the rate limit; nothing in the workflow can.
+
+<Note>
+Remove `FORCE` before you go live, or it will post on days that genuinely had
+nothing in them.
+</Note>
+
 ## Turning it off
 
 ```bash
@@ -86,6 +117,17 @@ those yourself:
 ```bash
 KARMAX_SOCIAL_FORBIDDEN="A Name,Another Company"
 ```
+
+And the other direction, for when the list catches an ordinary word:
+
+```bash
+KARMAX_SOCIAL_ALLOW="automation,alerts,funding"
+```
+
+You will want this. A contact called "Hyd T Service" makes *service* a name; a
+memory subject called *automation* makes *automation* one. `karmax social log`
+tells you exactly which word stopped a post, so add them as you see them —
+expect a handful in the first week.
 
 <Note>
 Ordinary words are deliberately not forbidden, even when they appear in a
