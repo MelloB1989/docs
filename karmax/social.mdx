@@ -1,0 +1,160 @@
+---
+title: Posting to X and LinkedIn
+description: 'KARMAX can write about your day and publish it without asking. What stops it saying the wrong thing.'
+icon: "megaphone"
+---
+
+KARMAX can read your day — what it built for you, your calendar, your own
+messages, what its memory knows — and publish one post about it. Nothing is
+approved first.
+
+<Warning>
+This is the only part of KARMAX where a model's output reaches strangers
+without anybody reading it. A post cannot be unpublished: it has already been
+seen, and the person it named did not choose to be written about. Everything
+below exists because of that.
+</Warning>
+
+## Turning it on
+
+```bash
+karmax login x           # four values from the X developer portal
+karmax login linkedin    # browser sign-in
+karmax loops install daily-post
+```
+
+Until both are connected the workflow runs, decides, and posts nothing.
+
+## Turning it off
+
+```bash
+karmax social off "on holiday"   # takes effect on the next post, no restart
+karmax social on
+```
+
+`KARMAX_SOCIAL_POSTING=off` does the same thing for a whole machine. The switch
+is read at the moment of posting, not at startup, so it works on a running
+daemon.
+
+## What it will not say
+
+The rules are enforced in code, at the last point before a post becomes public
+— not asked for in a prompt. A model told "never name a client" mostly
+complies, and the failures are exactly the interesting ones: the day something
+notable happened, with a name attached.
+
+A post is refused if it contains:
+
+<CardGroup cols={2}>
+  <Card title="Anyone's name" icon="user">
+    Anybody in your contacts, and anything your memory is filed under —
+    people, companies, clients, projects.
+  </Card>
+  <Card title="Money" icon="indian-rupee-sign">
+    ₹2,00,000, Rs 30000, $5k, 80k. "4k display" is not money.
+  </Card>
+  <Card title="Contact details" icon="phone">
+    Phone numbers, WhatsApp ids, email addresses.
+  </Card>
+  <Card title="Anything private" icon="key">
+    API keys, bearer tokens, localhost and internal URLs.
+  </Card>
+</CardGroup>
+
+Refused drafts are recorded as deliberately as published ones:
+
+```bash
+karmax social log
+```
+
+```
+10 Aug 18:04  refused   x
+  Shipped the first security report for a client today.
+  → social: it names somebody or something from the operator's private life
+```
+
+### Where the names come from
+
+Two automatic sources: your address book, and the subjects your memory files
+things under. KARMAX knows who is in *your* life; no general list of names
+could.
+
+Neither is complete. Somebody who is not a saved contact and not a memory
+subject — mentioned only inside the text of a fact — is invisible to both. Add
+those yourself:
+
+```bash
+KARMAX_SOCIAL_FORBIDDEN="A Name,Another Company"
+```
+
+<Note>
+Ordinary words are deliberately not forbidden, even when they appear in a
+contact name. A real address book contains entries like "Hyd T Service", and
+matching every word of it would make the word "service" unpublishable — so an
+honest post about a reporting service gets refused, and you switch the whole
+thing off. A guard nobody runs protects nothing.
+</Note>
+
+## What it will not do
+
+| | |
+|---|---|
+| **Post on an ordinary day** | A day needs four signals. Shipped work counts double; three short replies count for nothing. |
+| **Post twice about one thing** | Drafts are compared by content-word overlap over three weeks, not by string — the same observation reworded is still a repeat. |
+| **Post more than twice a day** | At most two per platform per 24 hours, three hours apart. |
+| **Post at lunchtime** | Not before 17:00 your time, so it has a day to look at. |
+
+It may also simply decline. If the day contains nothing publishable, the model
+replies `SKIP` and nothing goes out. That is a correct answer, not a failure.
+
+## What it reads
+
+| Source | What it takes | What it leaves |
+|---|---|---|
+| Your engineering activity | The tasks KARMAX ran for you, and whether they finished | The harness output — full of paths, hostnames, sometimes secrets |
+| Your calendar | Today's event **titles** | Descriptions and attendee lists |
+| WhatsApp | **Your own outgoing messages** | Anything anyone said to you |
+| Long-term memory | What it knows about your current work | — |
+
+The WhatsApp rule is worth stating twice. Writing a public post from other
+people's messages means publishing, in paraphrase, things they said in private
+to one person. Your own words are yours to reuse. Nobody else's are.
+
+The workflow has no send tool. It reads WhatsApp and cannot use it.
+
+## Checking on it
+
+```bash
+karmax social
+```
+
+```
+Posting is on.
+
+PLATFORM  LAST 24H  LAST POST
+x         1         10 Aug 18:04
+linkedin  1         10 Aug 18:04
+```
+
+## Configuration
+
+```bash
+KARMAX_LOOP_DAILY_POST_PLATFORMS=x        # default "x,linkedin"
+KARMAX_LOOP_DAILY_POST_MIN_HOUR=17
+KARMAX_LOOP_DAILY_POST_TZ=Asia/Kolkata    # UTC if unset
+KARMAX_SOCIAL_PER_DAY=2
+KARMAX_SOCIAL_MIN_GAP=3h
+KARMAX_SOCIAL_FORBIDDEN="names,it,cannot,know"
+```
+
+## Why X uses OAuth 1.0a
+
+It looks backwards and is not. X's OAuth 2.0 client-credentials token is
+app-only, and an app-only token cannot post as a user. Posting needs user
+context, and the user-context flow that needs no browser round trip is 1.0a
+with four values you copy from the developer portal once. Your app needs **Read
+and write** permissions — tokens from a read-only app work for reads and fail
+at the first post.
+
+LinkedIn is an ordinary browser sign-in. The app needs the `w_member_social`
+scope to post and `openid` to work out who you are.

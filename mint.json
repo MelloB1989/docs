@@ -54,6 +54,7 @@
         "karmax/install",
         "karmax/integrations",
         "karmax/recipes",
+        "karmax/social",
         "karmax/memory",
         {
           "group": "Building on KARMAX",
