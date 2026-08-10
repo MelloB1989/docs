@@ -1,0 +1,122 @@
+---
+title: Writing an integration
+description: 'Add a provider that authenticates itself and reports its health.'
+icon: "plug"
+---
+
+An integration is anything KARMAX authenticates and depends on. Channels carry
+conversation; connectors expose tools. Both answer the same three questions.
+
+```go
+type Integration interface {
+    Manifest() Manifest
+    Auth() connectorkit.AuthMethod
+    Health(ctx context.Context, c connectorkit.Credentials) error
+}
+```
+
+KARMAX owns where the secret lives, how it is obtained, and whether it currently
+works. An integration never persists a token itself.
+
+## The quickest version
+
+Most integrations have nothing to say beyond their manifest and a health check:
+
+```go
+integration.APIKey(integration.Manifest{
+    ID:          "linear",
+    Name:        "Linear",
+    Description: "Issues and cycles.",
+    SetupURL:    "https://linear.app/settings/api",
+    Config: []connectorkit.ConfigField{
+        {Key: "api_key", Description: "A personal API key", Required: true, Secret: true},
+    },
+}, "api_key", checkLinear)
+```
+
+That is a complete integration. `karmax login linear` now prompts for the key
+without echoing it, calls `checkLinear` before saving, and `karmax integrations`
+reports it.
+
+## Health must make a real call
+
+```go
+func checkLinear(ctx context.Context, c connectorkit.Credentials) error {
+    // A call the credential is required for.
+}
+```
+
+Checking that a config field is non-empty is not health — it is exactly the
+state an expired token is also in. Two providers here answer `200` with
+`{"ok": false}` for a dead token, so the status code alone reports a revoked app
+as working.
+
+## The four auth kinds
+
+| Kind | For | KARMAX does |
+|---|---|---|
+| `AuthNone` | Nothing needed | Says so |
+| `AuthAPIKey` | A key or token | Prompts per field, verifies, stores |
+| `AuthOAuth2` | A browser sign-in | Loopback callback, exchange, refresh |
+| `AuthCLI` | A session another binary holds | Checks it, tells you the command |
+
+Use `AuthCLI` when the session genuinely belongs elsewhere — `wacli` holds a
+WhatsApp pairing, `gws` holds a Google session. Keeping a second copy of a
+secret KARMAX does not own would be worse than reporting on it.
+
+## Adding tools
+
+A connector's tools are `connectorkit.Tool`, and become indistinguishable from
+built-ins once registered:
+
+```go
+func (c *Connector) Tools() []connectorkit.Tool {
+    return []connectorkit.Tool{{
+        Name:        "linear.issues",
+        Description: "List open issues. Use to see what is waiting.",
+        Parameters:  json.RawMessage(`{"type":"object","properties":{}}`),
+        Call:        listIssues,
+    }}
+}
+```
+
+Keep the set small. Every tool is context in the prompt and a choice the model
+has to get right, so four that do the job beat forty mirroring the REST API.
+
+### If the library already publishes karma tools
+
+Some libraries — wacli, for one — already expose their capabilities as
+`ai.GoFunctionTool`. Adopt them rather than wrapping:
+
+```go
+tools := builtin.GuardUntrusted(
+    builtin.FromGoFunctionTools(wacli.All(wacli.New(""))),
+    "WhatsApp, written by whoever sent it")
+```
+
+`GuardUntrusted` defangs the output of tools returning what other people wrote,
+in one place, so a tool the library adds later cannot arrive unguarded because
+nobody updated a list here.
+
+## Events
+
+A connector can turn things happening elsewhere into KARMAX events:
+
+```go
+connectorkit.EventSource{
+    ID: "issues", Kind: connectorkit.SourceWebhook,
+    EventKind: "linear.issue", Path: "/hooks/linear",
+    Verify: verifyDelivery,
+    Decode: decodeDelivery,
+}
+```
+
+Webhooks are preferred: no interval to tune and no delay to explain. Use
+`SourcePoll` only where the provider has no push — and not at all where polling
+would get the account flagged.
+
+## Registering it
+
+Add it to `internal/integrations/catalogue.go` so both the daemon and the CLI
+know it exists. That shared catalogue is what stops `karmax login` offering to
+connect something the daemon has never heard of.

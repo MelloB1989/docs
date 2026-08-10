@@ -1,0 +1,66 @@
+---
+title: What KARMAX is
+description: 'A personal AI daemon that runs on your machine and acts on your behalf.'
+icon: "robot"
+---
+
+KARMAX is a daemon. It runs on your laptop, your Pi, or a small server you own,
+and it keeps working when you close the terminal.
+
+That is the whole design decision, and everything else follows from it. A chat
+window can only answer when you are looking at it. A daemon can watch your
+WhatsApp for the question somebody asked three hours ago, notice that the reply
+you promised on Tuesday never went, and ask whether the June deadline in its
+memory is still real.
+
+## What it actually does
+
+<CardGroup cols={2}>
+  <Card title="Talks to you where you already are" icon="comments">
+    WhatsApp, Discord, Slack, Telegram, or the phone app. The same assistant,
+    the same memory, whichever one you happen to open.
+  </Card>
+  <Card title="Remembers" icon="brain">
+    Long-term memory backed by [GitLoom](/packages/karma-ai/memory) — every fact
+    about one subject in one place, with the history of how it changed.
+  </Card>
+  <Card title="Runs things on a schedule" icon="clock-rotate-left">
+    Digests, sweeps, watchers. Written as a YAML file you can read in ten
+    seconds, or as sandboxed code when you need real control flow.
+  </Card>
+  <Card title="Connects to your tools" icon="plug">
+    GitHub, Notion, Google Workspace, and anything else you connect — as tools
+    the agent can call, not as integrations you have to babysit.
+  </Card>
+</CardGroup>
+
+## The parts worth knowing about
+
+**It is yours.** KARMAX holds a WhatsApp session, Google tokens and your
+memory. All of it lives on your machine, in your home directory. There is no
+hosted KARMAX to sign into.
+
+**It acts, and tells you what it did.** Not everything needs your approval, and
+not everything can be automatic. KARMAX answers what it is confident about,
+proposes what needs a decision, and reminds you about what only you can do.
+
+**Everything it can do is a capability you granted.** A loop that wants to send
+messages as you has to declare that, and you see the list before it is
+installed. See [the capability model](/karmax/dev/capabilities).
+
+## Getting started
+
+<CardGroup cols={2}>
+  <Card title="Install and first run" icon="wand-magic-sparkles" href="/karmax/install">
+    Get the daemon running and talk to it.
+  </Card>
+  <Card title="Connect something" icon="key" href="/karmax/integrations">
+    `karmax login` — WhatsApp, Slack, GitHub, Notion.
+  </Card>
+  <Card title="Automate something" icon="repeat" href="/karmax/recipes">
+    A digest, a watcher, a sweep — in one YAML file.
+  </Card>
+  <Card title="Build on it" icon="code" href="/karmax/dev/architecture">
+    Write a workflow, an integration, or a tool.
+  </Card>
+</CardGroup>

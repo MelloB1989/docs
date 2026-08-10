@@ -1,0 +1,63 @@
+---
+title: Memory
+description: 'What KARMAX remembers, where it keeps it, and how to correct it.'
+icon: "brain"
+---
+
+KARMAX's long-term memory is [GitLoom](/packages/karma-ai/memory): a git-backed
+store where every fact about one subject lives in one file, and the history of
+how that fact changed is the git history.
+
+That shape matters. "Everything about Siva" is one document that grew, not forty
+rows that happen to mention him — so recalling it gives the model the subject,
+not a scattering of sentences.
+
+## What gets remembered
+
+**Facts the agent decides are durable.** Decisions, commitments, people,
+project state, preferences. Written as they come up.
+
+**Your conversations with KARMAX.** Each channel thread is stored and
+periodically compacted, and memories form from what was actually said. This is
+why you do not have to tell KARMAX to remember something for it to know it.
+
+**Not other people's conversations.** The WhatsApp chats KARMAX watches on your
+behalf contribute *memories* — that Siva asked about the APK, that a deadline
+moved — but are never stored as transcripts. They are conversations with people
+who did not agree to be recorded.
+
+## Reading and correcting it
+
+```bash
+karmax memory search "what did we agree with CampX"
+karmax memory add "The Newtra deadline moved to the 30th" --category project
+karmax memory export ~/memory-dump.md
+```
+
+The app shows the same memory as a graph, where the edges are relationships
+GitLoom derived — who works on what, which decision affected which project.
+
+## When KARMAX asks if something is still true
+
+Time-sensitive facts go stale. A deadline passes; a "temporary" plan becomes
+permanent or gets dropped. KARMAX periodically picks the stalest such fact and
+asks you about it, from whichever channel you are in:
+
+> 🕰️ Still relevant? "Rameez to draft his experience letter" — from June 22.
+
+Answering closes it. If you say it is done, the fact is forgotten — but only
+when the answer identifies **one** fact. A GitLoom path names a *subject*, and
+one file can hold a hundred facts about it, so "that deadline is done" never
+deletes everything KARMAX knows about the project it belonged to.
+
+## Where it lives
+
+| | |
+|---|---|
+| Memories | GitLoom, in the namespace from `GITLOOM_NAMESPACE` |
+| Conversations | GitLoom, one per channel thread |
+| Contacts, events, timers, loop state | SQLite at `~/.karmax/db/karmax.db` |
+| The curated "about me" document | `~/.karmax/memory/<namespace>/ABOUT_ME.md` |
+
+Without a GitLoom key, memory stays entirely local in SQLite. That is the
+offline path, and it is a supported way to run KARMAX — not a degraded mode.

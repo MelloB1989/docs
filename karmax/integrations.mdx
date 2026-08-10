@@ -1,0 +1,136 @@
+---
+title: Connecting things
+description: 'One command for API keys, browser sign-ins and CLI sessions.'
+icon: "key"
+---
+
+Every provider makes you authenticate differently. Slack wants two tokens
+pasted, Google wants a browser round trip, WhatsApp wants a QR code scanned by
+your phone. You should not have to know which one you are in for before you can
+connect something.
+
+```bash
+karmax login              # what can be connected, and what already is
+karmax login slack        # connect one
+karmax integrations       # what is connected, and whether it still works
+```
+
+## What `karmax integrations` tells you
+
+```
+INTEGRATION       KIND       AUTH    STATE          CREDENTIALS FROM
+github            connector  apikey  NOT CONNECTED  not configured
+google_workspace  connector  cli     working        its own session
+notion            connector  apikey  working        karmax login
+slack-main        channel    apikey  FAILING        karmax.yaml
+whatsapp          channel    cli     working        its own session
+
+slack-main: Slack refused the credentials: invalid_auth
+```
+
+**STATE** is the result of a real call to the provider, not a check that a
+config field is non-empty — which is exactly the state an expired token is also
+in. **CREDENTIALS FROM** answers the question you will eventually have: *I set
+that key in the yaml, so why is it using something else?*
+
+<Note>
+KARMAX re-checks every 30 minutes on its own. The point is that a dead
+credential becomes visible before something depends on it, rather than surfacing
+as a loop failing at 4am.
+</Note>
+
+## Where credentials live
+
+Three places, in this order — the first one that has a value wins, **per value**:
+
+<Steps>
+  <Step title="KARMAX's own store">
+    What `karmax login` writes. It wins because logging in is an act you just
+    performed, and it should not be silently overridden by a setting somebody
+    wrote months ago.
+  </Step>
+  <Step title="karmax.yaml">
+    A `token:` or a `settings:` entry, with `${ENV}` interpolated. This is the
+    right place for a container install where you manage config as a file.
+  </Step>
+  <Step title="The environment">
+    `KARMAX_<INTEGRATION>_<FIELD>` — so Slack's bot token is
+    `KARMAX_SLACK_BOT_TOKEN`.
+  </Step>
+</Steps>
+
+Merging is per value, not wholesale: a client id in `karmax.yaml` survives a
+login that only obtains a token.
+
+```bash
+karmax login slack --forget   # drop the stored one; the file applies again
+```
+
+## The four ways of connecting
+
+<AccordionGroup>
+  <Accordion title="An API key — Slack, Telegram, Discord, Notion, GitHub" icon="key">
+    KARMAX prompts for each field the integration declares, without echoing
+    anything secret, then **calls the provider before saving**. A key that does
+    not work fails while you still have the page open, rather than hours later
+    inside a loop.
+  </Accordion>
+
+  <Accordion title="A browser sign-in — OAuth" icon="browser">
+    KARMAX opens a listener on `127.0.0.1`, opens your browser, and exchanges
+    the code when the provider redirects back. Loopback rather than a hosted
+    redirect, because KARMAX runs behind your router and there is no public URL
+    to send anyone to. Refresh tokens are stored and used automatically.
+  </Accordion>
+
+  <Accordion title="A session another program holds — WhatsApp, Google Workspace" icon="terminal">
+    `wacli` holds a WhatsApp pairing and `gws` holds a Google session, each in
+    its own store. KARMAX cannot log those in and does not keep a second copy of
+    a secret it does not own — it checks, and tells you the exact command:
+
+    ```
+    WhatsApp holds its own session and is not signed in: not paired
+      sign in with: wacli login    (scan the QR with WhatsApp)
+    ```
+  </Accordion>
+
+  <Accordion title="Nothing at all" icon="circle-check">
+    Some integrations need no credentials. `karmax login` says so and exits
+    rather than inventing a question.
+  </Accordion>
+</AccordionGroup>
+
+## Several accounts on one provider
+
+A work GitHub and a personal one, both connected at once:
+
+```bash
+export KARMAX_GITHUB_ACCOUNTS=work,personal
+karmax login github --account work
+karmax login github --account personal
+```
+
+The primary account keeps the plain tool names (`github.issues`); each named
+account gets its own (`github.issues@work`), so the agent acts as the identity
+you meant rather than whichever token loaded first.
+
+## What is available
+
+| Integration | Kind | Auth | Notes |
+|---|---|---|---|
+| WhatsApp | channel | CLI session | Through [wacli](https://github.com/MelloB1989/wacli). Your own account, not a business API. |
+| Slack | channel | two tokens | Socket Mode — no public URL needed. |
+| Telegram | channel | bot token | Long polling — no public URL needed. |
+| Discord | channel | bot token | |
+| Google Workspace | connector | CLI session | Calendar, Gmail, Drive, Chat, Tasks. |
+| GitHub | connector | token | Issues, PRs, webhooks. Several accounts. |
+| Notion | connector | integration secret | Search, read, append, query a database. |
+| Instagram | connector | password | **Off by default** — see below. |
+
+<Warning>
+**Instagram is unofficial.** It drives Instagram's private API by impersonating
+the mobile app. That is against their terms, accounts get restricted for it, and
+the credential is a real password rather than a revocable token. It stays off
+until you set `KARMAX_ENABLE_INSTAGRAM=true`, is read-only, and never polls.
+Enable it only if you accept that the account may be restricted.
+</Warning>

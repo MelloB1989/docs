@@ -41,7 +41,32 @@
   "navigation": [
     {
       "group": "Get Started",
-      "pages": ["introduction", "quickstart", "notes"]
+      "pages": [
+        "introduction",
+        "quickstart",
+        "notes"
+      ]
+    },
+    {
+      "group": "KARMAX",
+      "pages": [
+        "karmax/introduction",
+        "karmax/install",
+        "karmax/integrations",
+        "karmax/recipes",
+        "karmax/memory",
+        {
+          "group": "Building on KARMAX",
+          "icon": "code",
+          "pages": [
+            "karmax/dev/architecture",
+            "karmax/dev/recipes-reference",
+            "karmax/dev/workflows",
+            "karmax/dev/integrations",
+            "karmax/dev/capabilities"
+          ]
+        }
+      ]
     },
     {
       "group": "The Karma Suite packages",

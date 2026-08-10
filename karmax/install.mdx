@@ -1,0 +1,107 @@
+---
+title: Install and first run
+description: 'Get the daemon running and talk to it.'
+icon: "wand-magic-sparkles"
+---
+
+KARMAX is a single Go binary and a config file. It keeps everything it knows in
+`~/.karmax/`.
+
+## Build it
+
+```bash
+git clone https://github.com/MelloB1989/KARMAX.git
+cd KARMAX
+go build -o karmax ./cmd/karmax
+```
+
+## Configure it
+
+```bash
+cp karmax.yaml.example karmax.yaml
+```
+
+The parts that matter on a first run:
+
+```yaml
+karmax:
+  data_dir: "~/.karmax"
+
+ai:
+  providers:
+    anthropic:
+      api_key: "${ANTHROPIC_API_KEY}"
+
+agents:
+  - id: "nexus"
+    model: "claude-sonnet-5"
+    provider: "anthropic"
+    memory:
+      namespace: "nexus"
+    tools: [shell.exec, file.read, http.request, notify.send, claude_code.call]
+```
+
+Secrets go in `.env` beside the config, and `${NAME}` in the yaml reads from it.
+Nothing secret needs to live in `karmax.yaml` itself.
+
+## Run it
+
+```bash
+./karmax start
+```
+
+Then, from another terminal:
+
+```bash
+karmax ask "what can you do?"
+karmax integrations          # nothing connected yet
+```
+
+## Keep it running
+
+KARMAX is meant to be a daemon, so run it under your service manager rather than
+a terminal you will eventually close. On Linux with systemd:
+
+```ini
+# ~/.config/systemd/user/karmax.service
+[Unit]
+Description=KARMAX
+
+[Service]
+ExecStart=%h/code/KARMAX/karmax start
+WorkingDirectory=%h/code/KARMAX
+Restart=always
+StandardOutput=append:%h/.karmax/karmax.log
+StandardError=append:%h/.karmax/karmax.log
+
+[Install]
+WantedBy=default.target
+```
+
+```bash
+systemctl --user enable --now karmax
+loginctl enable-linger $USER   # so it survives logout
+```
+
+## What you get on a first run
+
+Four recipes are written into `~/.karmax/recipes/` and start working
+immediately: a morning news digest, a memory sync, a profile refresh and a daily
+briefing. They are ordinary files — read them, change them, delete them.
+
+<Note>
+Existing files are never overwritten. If you edit `tech-news.yaml`, a restart
+will not quietly put the original back: a default is what you get when you have
+not decided, not something that overrules you once you have.
+</Note>
+
+## Next
+
+<CardGroup cols={2}>
+  <Card title="Connect something" icon="key" href="/karmax/integrations">
+    WhatsApp, Slack, GitHub, Notion.
+  </Card>
+  <Card title="Automate something" icon="repeat" href="/karmax/recipes">
+    Your first recipe.
+  </Card>
+</CardGroup>

@@ -1,0 +1,104 @@
+---
+title: Architecture
+description: 'How KARMAX is put together, and why.'
+icon: "sitemap"
+---
+
+KARMAX is an orchestration daemon. It holds no model of its own: it routes
+events to an agent, gives that agent tools, remembers what happened, and runs
+things on a schedule.
+
+## The pieces
+
+<AccordionGroup>
+  <Accordion title="The event log" icon="list">
+    Everything that happens is an event in a durable log, with per-subscriber
+    offsets. A subscriber that was down does not lose what arrived while it was
+    down; one that crashes mid-handle sees the event again. Delivery is
+    at-least-once, and anything that fails repeatedly is dead-lettered rather
+    than retried forever in silence.
+
+    A new subscriber starts at the HEAD of the log, not at zero. Starting at
+    zero once re-delivered 1,461 historical WhatsApp messages on a restart.
+  </Accordion>
+
+  <Accordion title="The agent" icon="robot">
+    One agent per configured identity, with a mailbox per conversation —
+    ordered within a chat, concurrent across chats. It has a main model, a
+    cheaper memory model for retrieval, and a summary model for compaction.
+  </Accordion>
+
+  <Accordion title="Tools" icon="wrench">
+    The universal currency. Everything an integration offers, everything the
+    agent can do, and everything a sandboxed workflow can reach is a tool with a
+    name and a JSON schema. The agent calls them, workflows call them through
+    one host function, and the Broker gates them by name.
+  </Accordion>
+
+  <Accordion title="The Broker" icon="shield-halved">
+    Decides what an extension may do and meters what it did. Default deny: a
+    subject with no grants is refused everything. See
+    [the capability model](/karmax/dev/capabilities).
+  </Accordion>
+
+  <Accordion title="Memory" icon="brain">
+    GitLoom when configured, SQLite when not. One store, never both — two stores
+    that can disagree is a worse failure than one that can be down, because the
+    disagreement is silent.
+  </Accordion>
+
+  <Accordion title="Loops" icon="repeat">
+    Three tiers, in order of how much they can do: recipes (a YAML file),
+    signed WASM workflows (sandboxed code with a manifest), and compiled-in
+    loops (first-party, full authority). Durable runs, retries and step
+    checkpointing come from the loop runtime, so no tier reimplements them.
+  </Accordion>
+
+  <Accordion title="The Clock" icon="clock">
+    Durable timers. "Continue on Thursday" is a row, not a goroutine, so it
+    survives a restart.
+  </Accordion>
+</AccordionGroup>
+
+## How a message becomes an action
+
+<Steps>
+  <Step title="A channel receives it">
+    WhatsApp via a wacli webhook, Slack over its socket, Telegram by polling.
+    Each channel decides in Go — not by asking a model — whether KARMAX was
+    addressed, because that decides whether it speaks at all.
+  </Step>
+  <Step title="It becomes an event">
+    `comms.message`, appended to the durable log.
+  </Step>
+  <Step title="It reaches a mailbox">
+    Routed to the agent's mailbox for that conversation. Messages in one chat
+    are handled in order; different chats run concurrently.
+  </Step>
+  <Step title="The agent takes a turn">
+    With dynamic context: the time, your profile, open review questions, active
+    coding sessions, available channels, and memory retrieved for this message.
+  </Step>
+  <Step title="It acts">
+    Its own tools for what it can do directly; `claude_code.call` for work that
+    needs a shell, files or research. Anything long runs in the background and
+    comes back later as a `delegation.completed` event.
+  </Step>
+</Steps>
+
+## The rules the code follows
+
+**Tools are the currency.** Adding an integration adds tools. It does not add a
+host function, an ABI, or a special case in the sandbox. This is why WhatsApp
+went from six bespoke host functions to zero.
+
+**Untrusted content is fenced or defanged at the boundary.** Anything somebody
+else wrote — a WhatsApp message, a GitHub comment — is neutralised where it
+enters, not where it is used. A loop author cannot forget.
+
+**A failure is reported where somebody will see it.** A tool that fails returns
+that failure to the model, which can adapt. A credential that dies shows up in
+`karmax integrations` before something depends on it.
+
+**Nothing that matters is only in memory.** Runs, timers, offsets, credentials
+and loop state are rows. A restart resumes rather than forgets.

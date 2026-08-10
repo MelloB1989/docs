@@ -1,0 +1,26 @@
+---
+title: Recipe reference
+description: 'Every verb, what it needs, and what it returns.'
+icon: "list-check"
+---
+
+Generated from `internal/recipes/recipe.go`, so it cannot drift from what
+KARMAX actually accepts.
+
+| Verb | Does | Required fields | Returns |
+|---|---|---|---|
+| `ask` | the operator's agent, with tools and judgement | — | yes |
+| `harness` | a coding harness, for research and shell work | — | yes |
+| `gateway` | the main model, no agent loop — cheapest | — | yes |
+| `http` | fetch something | `url` | yes |
+| `tool` | call a KARMAX tool by name | `name` | yes |
+| `recall` | read long-term memory | — | yes |
+| `remember` | write long-term memory | `fact` | no |
+| `notify` | tell the operator | `title` | no |
+| `propose` | ask the operator to approve an action | `title`, `action` | no |
+| `remind` | put something on the operator's list | `title` | no |
+| `send` | message someone through WhatsApp | `to`, `text` | no |
+| `sleep` | durable wait; the run resumes later | — | no |
+| `log` | write a line to KARMAX's log | — | no |
+
+Only the verbs that return something can be bound with `as`.

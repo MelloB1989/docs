@@ -1,0 +1,161 @@
+---
+title: Writing a workflow
+description: 'Sandboxed WASM automations with a capability manifest.'
+icon: "cube"
+---
+
+A workflow is a WASM module with a signed manifest of what it needs. It runs
+with no filesystem, no environment, no sockets, and no host function it did not
+declare — which is what makes it safe to install one you did not write.
+
+Reach for it when a [recipe](/karmax/recipes) is not enough: real control flow,
+state across runs, or tools of your own.
+
+## The shape of one
+
+```go
+//go:build wasip1
+
+package main
+
+import "github.com/MelloB1989/karmax/pkg/loopwasm"
+
+//go:wasmexport run
+func run() {
+    chats, err := loopwasm.Tool("whatsapp_list_chats", map[string]any{"limit": 50})
+    if err != nil {
+        loopwasm.Log("could not list chats: %v", err)
+        return
+    }
+    loopwasm.Remember("Chats reviewed: " + chats)
+}
+
+func main() {}
+```
+
+```yaml
+# loop.yaml
+name: my-loop
+version: 1.0.0
+description: What it does, in a sentence somebody approving it will read.
+schedule: "0 */4 * * *"
+memory_mb: 48
+
+host: [log, remember, tool]
+
+tools:
+  - whatsapp_list_chats
+
+capabilities:
+  - memory:nexus:write
+```
+
+```bash
+GOOS=wasip1 GOARCH=wasm go build -buildmode=c-shared -o my-loop.wasm .
+karmax wloop sign --manifest loop.yaml --module my-loop.wasm
+karmax wloop install my-loop-1.0.0.kloop
+```
+
+## The manifest
+
+| Field | Means |
+|---|---|
+| `host` | Host functions the module may call. Anything not listed is refused at runtime, not logged. |
+| `tools` | KARMAX tools it may call through `loopwasm.Tool`. This is the whole of its reach outside the sandbox. |
+| `provides` | Tools it IMPLEMENTS and lends to your agent. |
+| `capabilities` | Broker grants in `class:value` form — `http:api.github.com`, `memory:nexus:write`. |
+| `schedule` / `events` / `webhook` | What triggers it. |
+| `memory_mb` | Its memory ceiling. |
+
+`tools:` is also what install grants, so you do not repeat those names under
+`capabilities:`. It is the list the operator reads.
+
+## Host functions
+
+`log`, `config`, `trigger`, `recall`, `remember`, `notify`, `http`, `ask`,
+`gateway`, `harness`, `summarize`, `propose`, `remind`, `run_loop`,
+`operator_chats`, `short_set`, `short_get`, `short_all`, `short_forget`,
+`chat_summary_get`, `chat_summary_save`, and **`tool`**.
+
+`tool` is the one that matters. Every integration reaches a workflow through it:
+
+```go
+out, err := loopwasm.Tool("github.issues", map[string]any{"repo": "owner/name"})
+```
+
+There is no WhatsApp host function, no GitHub host function, and no Notion host
+function. Adding an integration costs no ABI.
+
+## Providing tools to the agent
+
+A workflow can hand your agent tools of its own:
+
+```yaml
+provides:
+  - name: deal.status
+    description: Where a named deal stands right now
+    parameters:
+      type: object
+      properties:
+        deal: {type: string}
+      required: [deal]
+```
+
+```go
+func init() {
+    loopwasm.Provide("deal.status", func(in struct{ Deal string }) (string, error) {
+        return recallDeal(in.Deal)
+    })
+}
+```
+
+Register in `init`, not in `run`: the host serves a provided tool on a **fresh
+instance** where `run` has never executed. That is deliberate — the turn calling
+your tool is often one your own `ask` started, and re-entering a live instance
+means calling into a module suspended inside a host call. A fresh instance costs
+3.4ms and makes that case identical to the case where nothing is running.
+
+Provided tools exist only while the agent is working on your workflow's behalf:
+during your `ask`, and during a later turn your work caused. They are not added
+to the agent permanently.
+
+## Testing without a toolchain
+
+`pkg/loopwasm` compiles on a normal machine, where every host call returns
+`ErrNotInWASM`. Keep your decisions in a file without the `wasip1` build tag and
+test them directly — that is how `wa-monitor` tests what it decides without
+WhatsApp being involved.
+
+```go
+//go:build !wasip1
+
+func TestItSkipsSmallTalk(t *testing.T) {
+    if !isTrivial("ok") {
+        t.Error("\"ok\" is not worth a reply")
+    }
+}
+```
+
+## Publishing
+
+```bash
+karmax wloop sign --manifest loop.yaml --module my-loop.wasm
+```
+
+Open a PR against [karmax-loops](https://github.com/MelloB1989/karmax-loops)
+with the source and `loop.yaml`. Artifacts attach to a Release rather than being
+committed — a `.kloop` is ~3MB, and a registry carrying every version forever
+becomes a clone nobody wants. `index.json` points at the release and pins it by
+digest.
+
+### While you are still writing it
+
+```bash
+karmax wloop sign --unsigned
+karmax wloop install my-loop-0.1.0.kloop --untrusted
+```
+
+Untrusted means nobody vouched for who wrote it. It does **not** mean it may do
+anything: the digest still binds the module to its manifest, the manifest still
+gates every call, and the Broker still enforces every grant. KARMAX will ask you
+to type the loop's name to confirm — `y` is not accepted.

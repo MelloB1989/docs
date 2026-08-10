@@ -1,0 +1,94 @@
+---
+title: The capability model
+description: 'What an extension may do, and who decided.'
+icon: "shield-halved"
+---
+
+KARMAX runs code it did not write: recipes you wrote, workflows from a registry,
+connectors you enabled. The Broker decides what each of them may do.
+
+**Default deny.** A subject holding no grants is refused everything. There is no
+implicit permission derived from having been installed.
+
+## Grants
+
+A grant is `subject → capability:value`.
+
+| Capability | Value | Means |
+|---|---|---|
+| `tool` | a tool name, or `*` | May call that tool |
+| `http` | a hostname, or `*` | May reach that host |
+| `memory` | `<namespace>` or `<namespace>:write` | May read or write that memory |
+| `channel` | a channel id | May send on that channel |
+| `spend` | a number, or `*` | Daily unit ceiling |
+
+Patterns are deliberately limited to `*`, `prefix.*` and `*.suffix`. A grant
+language nobody can read at a glance is a grant language that gets approved
+without being read.
+
+```bash
+karmax caps list                      # every grant
+karmax caps list loop:wa-monitor      # one subject's
+karmax caps revoke loop:wa-monitor    # take it all back
+```
+
+## Where grants come from
+
+A workflow's manifest. Installing it grants exactly what the manifest declared —
+and an upgrade **replaces** the set rather than merging, so a version that no
+longer asks for something actually loses it.
+
+You see the list before anything is written:
+
+```
+wa-monitor 1.0.0 — The proactive WhatsApp proxy.
+  publisher OK3vMczEfd5RAh…
+  trust     registry (countersigned by OK3vMczEfd5RAh…)
+
+It will be allowed to:
+  - SEND WHATSAPP MESSAGES AS YOU
+  - call the tool whatsapp_send_message
+  - read your long-term memory
+  - WRITE your memory in nexus
+  - ask your agent questions (which can use its tools)
+```
+
+## Trust tiers
+
+| Tier | Means |
+|---|---|
+| **registry** | Countersigned by a key you trust — it went through review |
+| **community** | Signed by its publisher only. Nobody else vouched |
+| **untrusted** | No valid signature at all |
+
+All three are gated identically by the Broker. The tier says who vouched for the
+code, not what it may do.
+
+```bash
+karmax wloop trust --registry <key>   # accept loops countersigned by this key
+karmax wloop list                     # what is installed, and how it was trusted
+karmax wloop verify                   # re-check everything against the lockfile
+```
+
+`verify` also reports a loop built against a different host ABI. A signature
+proves an artifact is intact, not that it still fits — a loop declaring host
+functions this KARMAX no longer has would install, run, and be refused on its
+first real call, which looks exactly like a loop that decided to do nothing.
+
+## Two gates, not one
+
+Every tool call passes both:
+
+<Steps>
+  <Step title="The signed manifest">
+    Is this tool in the `tools:` list the operator approved? `tool` is a single
+    host function, so a workflow that declares it could otherwise name anything
+    in the registry.
+  </Step>
+  <Step title="The Broker">
+    Has the operator granted `tool:<name>` to this subject?
+  </Step>
+</Steps>
+
+Either one refusing refuses the call. A grant of `tool:*` does not let a
+workflow call something its manifest never listed.
